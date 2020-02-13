@@ -353,15 +353,15 @@ object Phrase {
 }
 
 sealed trait Primitive[T <: PhraseType] extends Phrase[T] {
-  def prettyPrint: String
+  def prettyPrint: String = throw new Exception("the pretty printer should be implemented by the macro")
 
-  def xmlPrinter: xml.Elem
+  def xmlPrinter: xml.Elem = throw new Exception("the xml printer should be implemented by the macro")
 
-  def visitAndRebuild(f: VisitAndRebuild.Visitor): Phrase[T]
+  def visitAndRebuild(f: VisitAndRebuild.Visitor): Phrase[T] = throw new Exception("the visit and rebuild should be implemented by the macro")
 }
 
 abstract class ExpPrimitive extends Primitive[ExpType] {
-  def eval(s: OperationalSemantics.Store): OperationalSemantics.Data
+  def eval(s: OperationalSemantics.Store): OperationalSemantics.Data = ???
 
   def fedeTranslation(env: Map[Identifier[ExpType], Identifier[AccType]])
                      (C: Phrase[AccType ->: AccType]) : Phrase[AccType] = ???

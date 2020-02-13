@@ -1,26 +1,34 @@
 ThisBuild / scalaVersion := "2.12.10"
 ThisBuild / organization := "org.rise-lang"
 
+lazy val commonSettings = Seq(
+  scalacOptions ++= Seq(
+    "-Xfatal-warnings",
+    "-Xlint",
+    "-Xmax-classfile-name", "100",
+    "-unchecked",
+    "-deprecation",
+    "-feature",
+    "-language:reflectiveCalls"
+  ),
+  fork := true,
+  resolvers ++= Seq(
+    Resolver.sonatypeRepo("releases"),
+    Resolver.sonatypeRepo("snapshots")
+  ),
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
+)
+
 lazy val shine = (project in file("."))
   .aggregate(executor)
-  .dependsOn(executor, elevate, rise)
+  .dependsOn(shineMacros, executor, elevate, rise)
   .settings(
     name    := "shine",
     version := "1.0",
 
+    commonSettings,
+
     javaOptions ++= Seq("-Djava.library.path=lib/executor/lib/Executor/build", "-Xss20m"),
-
-    scalacOptions ++= Seq(
-      "-Xfatal-warnings",
-      "-Xlint",
-      "-Xmax-classfile-name", "100",
-      "-unchecked",
-      "-deprecation",
-      "-feature",
-      "-language:reflectiveCalls"
-    ),
-
-    fork := true,
 
     // Scala libraries
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
@@ -46,3 +54,11 @@ lazy val executor   = (project in file("lib/executor"))
 lazy val rise       = (project in file("lib/rise"))
 
 lazy val elevate    = (project in file("lib/elevate"))
+
+lazy val shineMacros = (project in file("macros"))
+  .settings(
+    name := "macros",
+    version := "1.0",
+    commonSettings,
+    libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
+  )
