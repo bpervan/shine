@@ -16,8 +16,8 @@ object Primitive {
       import c.universe._
       val inputs = annottees.map(_.tree).toList
       val (annottee, expandees) = inputs match {
-        case (param: ValDef) :: (rest @ (_ :: _)) => (param, rest)
-        case (param: TypeDef) :: (rest @ (_ :: _)) => (param, rest)
+        case (param: ValDef) :: (rest @ _ :: _) => (param, rest)
+        case (param: TypeDef) :: (rest @ _ :: _) => (param, rest)
         case _ => (EmptyTree, inputs)
       }
       println((annottee, expandees))
@@ -27,7 +27,6 @@ object Primitive {
   }
 
   class Impl(val c: blackbox.Context) {
-//    import c.universe.Flag._
     import c.universe._
 
     def expPrimitive(annottees: c.Expr[Any]*): c.Expr[Any] = {
@@ -39,52 +38,124 @@ object Primitive {
         case _ => c.abort(c.enclosingPosition, "expected a class definition")
       }
     }
-    def makeStringName(s: String): String =
+
+    def makeLowerCaseName(s: String): String =
       Character.toLowerCase(s.charAt(0)) + s.substring(1)
 
-    def makeArgs(p: Seq[Tree]): Seq[TermName] =
-      p.map({
-        case q"$_ val $n: $_ "     => n
-        case q"$_ val $n: $_ = $_" => n
-        case x =>
-          c.abort(c.enclosingPosition, s"expected a parameter, but got $x")
-      })
-        .asInstanceOf[Seq[TermName]]
-
-//    def makeArgList(seq: Seq[TermTree]): Tree = seq.size match {
-//      case 0 => q""
-//      case 1 => q"${seq.head}"
-//      case _ => q"${seq.head} , ${makeArgList(seq.tail)}"
-//    }
-//
-    def makeVisitAndRebuild(name: TypeName, args: List[Ident]): Tree = {
-      def makeCall: Apply = Apply(Ident(name), args)
-
+    def makeVisitAndRebuild(name: TypeName, params: List[ValDef]): Tree = {
+      val v = q"v"
       q"""
-      override def visitAndRebuild(v: VisitAndRebuild.Visitor): $name
-        = ${makeCall}
+        override def visitAndRebuild(
+          $v: shine.DPIA.Phrases.VisitAndRebuild.Visitor): $name
+        = new ${Apply(Ident(name), params.map {
+          case ValDef(_, name, tpt, _) => tpt match {
+              case Ident(TypeName("DataType")) | Ident(TypeName("ScalarType")) |
+                   Ident(TypeName("BasicType"))     => q"$v.data($name)"
+              case Ident(TypeName("Nat"))           => q"$v.nat($name)"
+              case Ident(TypeName("NatToNat"))      => q"$v.natToNat($name)"
+              case Ident(TypeName("NatToData"))     => q"$v.natToData($name)"
+              case Ident(TypeName("AccessType"))    => q"$v.access($name)"
+              case Ident(TypeName("AddressSpace"))  => q"$v.addressSpace($name)"
+              // Phrase[ExpType]
+              case AppliedTypeTree((Ident(TypeName("Phrase")), _)) =>
+                q"shine.DPIA.Phrases.VisitAndRebuild($name, $v)"
+              // Vector[Phrase[ExpType]]
+              case AppliedTypeTree((Ident(TypeName("Vector")),
+                  List(AppliedTypeTree((Ident(TypeName("Phrase")), _)))))
+                |   AppliedTypeTree((Ident(TypeName("Seq")),
+                  List(AppliedTypeTree((Ident(TypeName("Phrase")), _)))))
+              =>
+                q"$name.map(shine.DPIA.Phrases.VisitAndRebuild(_, $v))"
+              case _ =>
+                q"$name"
+            }
+          })}
       """
     }
 
-    def makeChain(a: TermName, props: Seq[TermName]): Tree =
-      if (props.isEmpty) q"true"
-      else
-        q"(${a}.${props.head} == ${props.head}) && ${makeChain(a, props.tail)}"
+    def makeXMLPrinter(name: TypeName, params: List[ValDef]): Tree = {
+      def makeAttributes(params: List[ValDef]): (List[ValDef], Tree) = {
+        params.head match {
+          case ValDef(_, name, tpt, _) => tpt match {
+            case Ident(TypeName("DataType")) | Ident(TypeName("ScalarType")) |
+                 Ident(TypeName("BasicType")) | Ident(TypeName("Nat")) |
+                 Ident(TypeName("NatToNat")) | Ident(TypeName("NatToData")) |
+                 Ident(TypeName("AccessType")) | Ident(TypeName("AddressSpace"))
+              =>
+              val (list, next) = makeAttributes(params.tail)
+              (list, q"""
+                 scala.xml.Attribute(${name.toString},
+                                     scala.xml.Text(
+                                        shine.DPIA.Phrases.ToString($name)),
+                                     $next)
+               """)
+            case _ => (params, q"scala.xml.Null")
+          }
+        }
+      }
+
+      def makeBody(params: List[ValDef]): List[Tree] = {
+        params.map {
+          case ValDef(_, name, tpt, _) =>
+
+            val body = tpt match {
+              // Phrase[ExpType]
+              case AppliedTypeTree((Ident(TypeName("Phrase")), _)) =>
+                q"shine.DPIA.Phrases.xmlPrinter($name)"
+              // Vector[Phrase[ExpType]]
+              case AppliedTypeTree((Ident(TypeName("Vector")),
+                  List(AppliedTypeTree((Ident(TypeName("Phrase")), _)))))
+                |   AppliedTypeTree((Ident(TypeName("Seq")),
+                  List(AppliedTypeTree((Ident(TypeName("Phrase")), _)))))
+              =>
+                q"$name.flatMap(shine.DPIA.Phrases.xmlPrinter(_)):_*"
+              case _ =>
+                q"scala.xml.Text(shine.DPIA.Phrases.ToString($name))"
+            }
+            q"""
+               scala.xml.Elem(null, ${name.toString},
+                              scala.xml.Null, scala.xml.TopScope,
+                              minimizeEmpty = false, $body)
+             """
+        }
+      }
+
+      val lowerCaseName = makeLowerCaseName(name.toString)
+      val (rest, attributes) = makeAttributes(params)
+      val body = makeBody(rest)
+
+      q"""
+       override def xmlPrinter: scala.xml.Elem = {
+         val attributes = $attributes
+         val body = $body
+         scala.xml.Elem(null, $lowerCaseName, attributes, scala.xml.TopScope,
+                        minimizeEmpty = false, body:_*)
+       }
+       """
+    }
 
     def makeExpPrimitiveClass(name: TypeName,
-                              params: Seq[Tree],
-                              body: Seq[Tree]): ClassDef = {
-
-      val paramIdentifiers: List[Ident] = params.map {
-        case ValDef(_, name, _, _) => Ident(name)
-      }.toList
-      println(makeVisitAndRebuild(name, paramIdentifiers))
+                              params: List[ValDef],
+                              body: List[Tree]): ClassDef = {
+      var visitAndRebuildMissing = true
+      var xmlPrinterMissing = true
+      body.foreach {
+        case DefDef(_, TermName("visitAndRebuild"), _, _, _, _) =>
+          visitAndRebuildMissing = false
+        case DefDef(_, TermName("xmlPrinter"), _, _, _, _) =>
+          xmlPrinterMissing = false
+        case _ =>
+      }
 
       val expClass = q"""
           final case class $name(..$params) extends ExpPrimitive {
             ..$body
 
-            ${makeVisitAndRebuild(name, paramIdentifiers)}
+            ${if (visitAndRebuildMissing)
+                makeVisitAndRebuild(name, params)
+              else q""}
+
+            ${if (xmlPrinterMissing) makeXMLPrinter(name, params) else q""}
           }
          """.asInstanceOf[ClassDef]
 
@@ -94,7 +165,15 @@ object Primitive {
 
     def expPrimitivesFromClassDef: ClassDef => ClassDef = {
       case q"case class $name(..$params) extends $_ {..$body} " =>
-        makeExpPrimitiveClass(name.asInstanceOf[c.TypeName], params.asInstanceOf[Seq[Tree]], body.asInstanceOf[Seq[Tree]])
+        makeExpPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"final case class $name(..$params) extends $_ {..$body} " =>
+        makeExpPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
       case _ =>
         c.abort(c.enclosingPosition, "expected a case class extends Primitive")
     }

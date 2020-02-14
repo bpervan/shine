@@ -19,7 +19,7 @@ final case class Generate(n: Nat,
   f :: expT(idx(n), read) ->: expT(dt, read)
   override val t: ExpType = expT(n`.`dt, read)
 
-  def prettyPrint: String =
+  override def prettyPrint: String =
     s"${this.getClass.getSimpleName} (${PrettyPhrasePrinter(f)})"
 
   override def xmlPrinter: Elem =
@@ -29,10 +29,10 @@ final case class Generate(n: Nat,
       </f>
     </generate>
 
-  def visitAndRebuild(fun: VisitAndRebuild.Visitor): Phrase[ExpType] =
+  override def visitAndRebuild(fun: VisitAndRebuild.Visitor): Phrase[ExpType] =
     Generate(fun.nat(n), fun.data(dt), VisitAndRebuild(f, fun))
 
-  def eval(s: OperationalSemantics.Store): OperationalSemantics.Data = ???
+  override def eval(s: OperationalSemantics.Store): OperationalSemantics.Data = ???
 
   def acceptorTranslation(A: Phrase[AccType])
                          (implicit context: TranslationContext): Phrase[CommType] = {

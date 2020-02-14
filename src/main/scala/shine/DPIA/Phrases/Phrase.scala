@@ -353,11 +353,13 @@ object Phrase {
 }
 
 sealed trait Primitive[T <: PhraseType] extends Phrase[T] {
-  def prettyPrint: String = throw new Exception("the pretty printer should be implemented by the macro")
+  def prettyPrint: String = this.toString
 
-  def xmlPrinter: xml.Elem = throw new Exception("the xml printer should be implemented by the macro")
+  def xmlPrinter: xml.Elem =
+    throw new Exception("xmlPrinter should be implemented by a macro")
 
-  def visitAndRebuild(f: VisitAndRebuild.Visitor): Phrase[T] = throw new Exception("the visit and rebuild should be implemented by the macro")
+  def visitAndRebuild(f: VisitAndRebuild.Visitor): Phrase[T] =
+    throw new Exception("visitAndRebuild should be implemented by a macro")
 }
 
 abstract class ExpPrimitive extends Primitive[ExpType] {
