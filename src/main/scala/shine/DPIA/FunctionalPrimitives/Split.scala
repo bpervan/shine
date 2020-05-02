@@ -6,25 +6,40 @@ import shine.DPIA.ImperativePrimitives.SplitAcc
 import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.OperationalSemantics
 import shine.DPIA.Semantics.OperationalSemantics._
-import shine.DPIA.Types._
 import shine.DPIA.Types.DataType._
+import shine.DPIA.Types._
 import shine.DPIA._
+import shine.macros.Primitive.expPrimitive
 
-import scala.xml.Elem
-
+@expPrimitive
 final case class Split(n: Nat,
                        m: Nat,
                        w: AccessType,
                        dt: DataType,
-                       array: Phrase[ExpType])
-  extends ExpPrimitive {
-
+                       array: Phrase[ExpType]) extends ExpPrimitive
+{
   array :: expT({m * n}`.`dt, w)
   override val t: ExpType = expT(m`.`(n`.`dt), w)
 
-  override def visitAndRebuild(fun: VisitAndRebuild.Visitor): Phrase[ExpType] = {
-    Split(fun.nat(n), fun.nat(m), fun.access(w), fun.data(dt), VisitAndRebuild(array, fun))
+  override def fedeTranslation(env: scala.Predef.Map[Identifier[ExpType],
+                               Identifier[AccType]])
+                              (C: Phrase[AccType ->: AccType]
+                              ) : Phrase[AccType] = {
+    import TranslationToImperative._
+    val otype = C.t.inT.dataType
+    fedAcc(env)(array)(λ(accT(otype))(o => SplitAcc(n, m, dt, C(o))))
   }
+
+  override def acceptorTranslation(A: Phrase[AccType])
+                                  (implicit context: TranslationContext
+                                  ): Phrase[CommType] =
+    TranslationToImperative.acc(array)(SplitAcc(n, m, dt, A))
+
+  override def continuationTranslation(C: Phrase[ExpType ->: CommType])
+                                      (implicit context: TranslationContext
+                                      ): Phrase[CommType] =
+    TranslationToImperative.con(array)(λ(expT({m * n}`.`dt, read))(x =>
+      C(Split(n, m, w, dt, x)) ))
 
   override def eval(s: Store): Data = {
     OperationalSemantics.eval(s, array) match {
@@ -44,34 +59,5 @@ final case class Split(n: Nat,
 
       case _ => throw new Exception("This should not happen")
     }
-  }
-
-  override def prettyPrint: String = s"(split $n ${PrettyPhrasePrinter(array)})"
-
-  override def xmlPrinter: Elem =
-    <split n={ToString(n)} m={ToString(m)} dt={ToString(dt)}>
-      {Phrases.xmlPrinter(array)}
-    </split>
-
-  override def fedeTranslation(env: scala.Predef.Map[Identifier[ExpType], Identifier[AccType]])
-                     (C: Phrase[AccType ->: AccType]) : Phrase[AccType] = {
-    import TranslationToImperative._
-
-    val otype = C.t.inT.dataType
-    fedAcc(env)(array)(λ(accT(otype))(o => SplitAcc(n, m, dt, C(o))))
-  }
-
-  override def acceptorTranslation(A: Phrase[AccType])
-                                  (implicit context: TranslationContext): Phrase[CommType] = {
-    import TranslationToImperative._
-
-    acc(array)(SplitAcc(n, m, dt, A))
-  }
-
-  override def continuationTranslation(C: Phrase[ExpType ->: CommType])
-                                      (implicit context: TranslationContext): Phrase[CommType] = {
-    import TranslationToImperative._
-
-    con(array)(λ(expT({m * n}`.`dt, read))(x => C(Split(n, m, w, dt, x)) ))
   }
 }

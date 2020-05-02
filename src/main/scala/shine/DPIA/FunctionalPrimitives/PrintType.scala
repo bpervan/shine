@@ -5,15 +5,14 @@ import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.OperationalSemantics
 import shine.DPIA.Semantics.OperationalSemantics._
 import shine.DPIA.Types._
-import shine.DPIA.{Phrases, _}
+import shine.DPIA._
+import shine.macros.Primitive.expPrimitive
 
-import scala.xml.Elem
-
+@expPrimitive
 final case class PrintType(msg: String,
                            dt: DataType,
-                           input: Phrase[ExpType])
-  extends ExpPrimitive {
-
+                           input: Phrase[ExpType]) extends ExpPrimitive
+{
   println(s"$msg : $dt (DPIA level)")
 
   input :: expT(dt, read)
@@ -21,28 +20,13 @@ final case class PrintType(msg: String,
 
   override def eval(s: Store): Data = OperationalSemantics.eval(s, input)
 
-  override def visitAndRebuild(fun: VisitAndRebuild.Visitor): Phrase[ExpType] = {
-    PrintType(msg, fun.data(dt), VisitAndRebuild(input, fun))
-  }
-
-  override def prettyPrint: String = s"printType(${PrettyPhrasePrinter(input)})"
-
-  override def xmlPrinter: Elem =
-    <printType dt={ToString(dt)}>
-      <input type={ToString(ExpType(dt, read))}>
-        {Phrases.xmlPrinter(input)}
-      </input>
-    </printType>
-
   override def acceptorTranslation(A: Phrase[AccType])
-                                  (implicit context: TranslationContext): Phrase[CommType] = {
-    import TranslationToImperative._
-    acc(input)(A)
-  }
+                                  (implicit context: TranslationContext
+                                  ): Phrase[CommType] =
+    TranslationToImperative.acc(input)(A)
 
   override def continuationTranslation(C: Phrase[ExpType ->: CommType])
-                                      (implicit context: TranslationContext): Phrase[CommType] = {
-    import TranslationToImperative._
-    con(input)(C)
-  }
+                                      (implicit context: TranslationContext
+                                      ): Phrase[CommType] =
+    TranslationToImperative.con(input)(C)
 }
