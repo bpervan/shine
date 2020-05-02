@@ -1,29 +1,55 @@
 package shine.OpenMP.FunctionalPrimitives
 
-import shine.DPIA.Compilation.TranslationContext
-import shine.DPIA.FunctionalPrimitives.AbstractReduce
-import shine.DPIA.Phrases.Phrase
-import shine.DPIA.Types.{AccType, CommType, DataType, ExpType}
+import shine.DPIA.Compilation.{TranslationContext, TranslationToImperative}
+import shine.DPIA.DSL._
+import shine.DPIA.Phrases._
+import shine.DPIA.Semantics.OperationalSemantics
+import shine.DPIA.Semantics.OperationalSemantics._
+import shine.DPIA.Types.DataType._
+import shine.DPIA.Types._
 import shine.DPIA._
 import shine.OpenMP.IntermediatePrimitives.ReduceParI
+import shine.macros.Primitive.expPrimitive
 
-//noinspection TypeAnnotation
+
+@expPrimitive
 final case class ReducePar(n: Nat,
                            dt1: DataType, dt2: DataType,
                            f: Phrase[ExpType ->: ExpType ->: ExpType],
                            init: Phrase[ExpType],
-                           array: Phrase[ExpType])
-  extends AbstractReduce(n, dt1, dt2, f, init, array)
+                           array: Phrase[ExpType]) extends ExpPrimitive
 {
-  override def makeReduce = ReducePar
+  f :: expT(dt2, read) ->: expT(dt1, read) ->: expT(dt2, write)
+  init :: expT(dt2, write)
+  array :: expT(n`.`dt1, read)
+  override val t: ExpType = expT(dt2, read)
 
-  override def makeReduceI(n: Nat,
-                           dt1: DataType,
-                           dt2: DataType,
-                           f: Phrase[->:[ExpType, ->:[ExpType, ->:[AccType, CommType]]]],
-                           init: Phrase[ExpType],
-                           array: Phrase[ExpType],
-                           out: Phrase[->:[ExpType, CommType]])
-                          (implicit context: TranslationContext): Phrase[CommType] =
-    ReduceParI(n, dt1, dt2, f, init, array, out)
+  override def acceptorTranslation(A: Phrase[AccType])
+                                  (implicit context: TranslationContext
+                                  ): Phrase[CommType] =
+    TranslationToImperative.con(this)(λ(expT(dt2, write))(r =>
+      TranslationToImperative.acc(r)(A)))
+
+  override def continuationTranslation(C: Phrase[ExpType ->: CommType])
+                                      (implicit context: TranslationContext
+                                      ): Phrase[CommType] =
+    TranslationToImperative.con(array)(λ(expT(n`.`dt1, read))(X =>
+      TranslationToImperative.con(init)(λ(expT(dt2, read))(Y =>
+        ReduceParI(n, dt1, dt2,
+          λ(expT(dt2, read))(x => λ(expT(dt1, read))(y => λ(accT(dt2))(o =>
+            TranslationToImperative.acc( f(x)(y) )( o ) ))),
+          Y, X, C)))))
+
+  override def eval(s: Store): Data = {
+    val fE = OperationalSemantics.eval(s, f)(BinaryFunctionEvaluator)
+    val initE = OperationalSemantics.eval(s, init)
+    OperationalSemantics.eval(s, array) match {
+      case ArrayData(xs) =>
+        ArrayData(Vector(xs.fold(initE) {
+          (x, y) => OperationalSemantics.eval(s,
+            fE(Literal(x))(Literal(y)))
+        }))
+      case _ => throw new Exception("This should not happen")
+    }
+  }
 }

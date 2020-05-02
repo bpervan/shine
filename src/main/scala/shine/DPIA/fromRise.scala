@@ -271,7 +271,7 @@ object fromRise {
           expT(b, read) ->: expT(a, read) ->: expT(b, write), f =>
           fun[ExpType](expT(b, read), i =>
             fun[ExpType](expT(n`.`a, read), e =>
-              ReduceSeqUnroll(n, a, b, f, i, e))))
+              ReduceSeq(n, a, b, f, i, e, unroll = true))))
 
       case (ocl.OclReduceSeq(),
       lt.DepFunType(i: lt.AddressSpaceIdentifier,
