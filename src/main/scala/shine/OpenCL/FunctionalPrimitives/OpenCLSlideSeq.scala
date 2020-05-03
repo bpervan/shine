@@ -5,7 +5,7 @@ import rise.core.{primitives => lp}
 import shine.DPIA.Compilation.TranslationContext
 import shine.DPIA.Compilation.TranslationToImperative._
 import shine.DPIA.DSL._
-import shine.DPIA.FunctionalPrimitives.{Map, Slide}
+import shine.DPIA.FunctionalPrimitives.Slide
 import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.OperationalSemantics.{Data, Store}
 import shine.DPIA.Types.DataType._
@@ -57,5 +57,6 @@ final case class OpenCLSlideSeq(rot: lp.SlideSeq.Rotate,
                                       ): Phrase[CommType] = ???
 
   override def eval(s: Store): Data =
-    Map(n, ArrayType(sz, dt1), dt2, f, Slide(n, sz, sp, dt1, input)).eval(s)
+    shine.DPIA.FunctionalPrimitives.Map(n, ArrayType(sz, dt1), dt2, f,
+      Slide(n, sz, sp, dt1, input)).eval(s)
 }
