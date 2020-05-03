@@ -376,12 +376,12 @@ abstract class ExpPrimitive extends Primitive[ExpType] {
 }
 
 trait AccPrimitive extends Primitive[AccType] {
-  def eval(s: OperationalSemantics.Store): OperationalSemantics.AccIdentifier
+  def eval(s: OperationalSemantics.Store): OperationalSemantics.AccIdentifier = ???
 }
 
 trait CommandPrimitive extends Primitive[CommType] {
   override val t: CommType = comm
-  def eval(s: OperationalSemantics.Store): OperationalSemantics.Store
+  def eval(s: OperationalSemantics.Store): OperationalSemantics.Store = ???
 }
 
 object Operators {

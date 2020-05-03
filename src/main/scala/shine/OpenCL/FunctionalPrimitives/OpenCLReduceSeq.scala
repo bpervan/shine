@@ -33,10 +33,10 @@ final case class OpenCLReduceSeq(unroll: Boolean)
     println("WARNING: opencl reduce seq acceptor translation is deprecated," +
       "implicit copies might happen")
     con(array)(λ(expT(n`.`dt1, read))(X =>
-      OpenCLReduceSeqI(n, initAddrSpace, dt1, dt2,
+      OpenCLReduceSeqI(unroll)(n, initAddrSpace, dt1, dt2,
         λ(expT(dt2, read))(x => λ(expT(dt1, read))(y => λ(accT(dt2))(o =>
           acc( f(x)(y) )( o )))),
-        init, X, λ(expT(dt2, write))(r => acc(r)(A)), unroll)(context)))
+        init, X, λ(expT(dt2, write))(r => acc(r)(A)))(context)))
   }
 
   override def continuationTranslation(C: Phrase[ExpType ->: CommType])
@@ -44,9 +44,9 @@ final case class OpenCLReduceSeq(unroll: Boolean)
                                       ): Phrase[CommType] = {
     //TODO same for ReduceSeq/AbstractReduce
     con(array)(λ(expT(n`.`dt1, read))(X =>
-      OpenCLReduceSeqI(n, initAddrSpace, dt1, dt2,
+      OpenCLReduceSeqI(unroll)(n, initAddrSpace, dt1, dt2,
         λ(expT(dt2, read))(x => λ(expT(dt1, read))(y => λ(accT(dt2))(o =>
           acc( f(x)(y) )( o )))),
-        init, X, C, unroll)(context)))
+        init, X, C)(context)))
   }
 }

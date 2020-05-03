@@ -6,6 +6,7 @@ import shine.DPIA.ImperativePrimitives._
 import shine.DPIA.Phrases._
 import shine.DPIA.Types._
 import shine.DPIA._
+import shine.OpenCL
 import shine.OpenCL.FunctionalPrimitives._
 import shine.OpenCL.ImperativePrimitives._
 
@@ -31,9 +32,12 @@ object AdjustArraySizesForAllocations {
   private def visitAndGatherInformation[T <: PhraseType](p: Phrase[T],
                                                  parallInfo: List[ParallelismInfo]): List[ParallelismInfo] = {
     p match {
-      case mG@MapGlobal(dim) => visitAndGatherInformation(mG.f, BasicInfo(Global, dim) :: parallInfo)
-      case mWG@MapWorkGroup(dim) => visitAndGatherInformation(mWG.f, BasicInfo(WorkGroup, dim) :: parallInfo)
-      case mL@MapLocal(dim) => visitAndGatherInformation(mL.f, BasicInfo(Local, dim) :: parallInfo)
+      case m@shine.OpenCL.FunctionalPrimitives.Map(level, dim) => level match {
+        case Global => visitAndGatherInformation(m.f, BasicInfo(Global, dim) :: parallInfo)
+        case Local => visitAndGatherInformation(m.f, BasicInfo(Local, dim) :: parallInfo)
+        case WorkGroup => visitAndGatherInformation(m.f, BasicInfo(WorkGroup, dim) :: parallInfo)
+        case Sequential => ???
+      }
       case mS: MapSeq => visitAndGatherInformation(mS.f, BasicInfo(Sequential, -1) :: parallInfo)
 
       // FIXME: works for scalars
@@ -124,12 +128,12 @@ object AdjustArraySizesForAllocations {
           }
           val stride = determineStride(parallLevel, dim, addrSpace)
 
-          val outerDimension = IdxDistribute(adjSize, oldSize, stride, parallLevel, adjElemT, E)
+          val outerDimension = OpenCL.FunctionalPrimitives.IdxDistribute(adjSize, oldSize, stride, parallLevel, adjElemT, E)
 
           val arr = identifier(freshName("arr"), expT(adjElemT, read))
           val mapFunBody = adjustedExpr(parallInfo.tail, adjElemT, oldElemT, addrSpace)(arr)
 
-          Map(oldSize, adjElemT, mapFunBody.t.dataType, Lambda(arr, mapFunBody), outerDimension)
+          shine.DPIA.FunctionalPrimitives.Map(oldSize, adjElemT, mapFunBody.t.dataType, Lambda(arr, mapFunBody), outerDimension)
 
         case (PairType(adjDt1, adjDt2), PairType(oldDt1, oldDt2)) =>
           parallInfo match {

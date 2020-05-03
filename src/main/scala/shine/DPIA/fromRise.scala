@@ -2,11 +2,15 @@ package shine.DPIA
 
 import rise.core.{semantics => ls, types => lt}
 import rise.{core => l}
+import shine.OpenCL
 import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.{OperationalSemantics => OpSem}
-import shine.DPIA.Types._
 import shine.DPIA.Types.DataType._
+import shine.DPIA.Types._
+import shine.OpenCL.{FunctionalPrimitives => OpenCLPrimitives}
+import shine.DPIA.{FunctionalPrimitives => DPIAPrimitives}
 
+//noinspection RedundantDefaultArgument
 object fromRise {
   def apply(expr: l.Expr): Phrase[_ <: PhraseType] = {
     if (!l.IsClosedForm(expr)) {
@@ -25,12 +29,11 @@ object fromRise {
       case _ => error(expr.t.toString, "a function type")
     }
 
-    case l.App(f, e) => {
+    case l.App(f, e) =>
       val ef = expression(f)
         .asInstanceOf[Phrase[FunType[PhraseType, PhraseType]]]
       val ee = expression(e).asInstanceOf[Phrase[PhraseType]]
       Apply(ef, ee)
-    }
 
     case l.DepLambda(x, e) => x match {
       case n: lt.NatIdentifier =>
@@ -195,7 +198,7 @@ object fromRise {
       lt.FunType(lt.FunType(_, lb: lt.DataType),
       lt.FunType(lt.ArrayType(n, la: lt.DataType), _)))
       =>
-        makeMap(Map, n, la, lb)
+        makeMap(DPIAPrimitives.Map.apply, n, la, lb)
 
       case (core.MapSeq(),
       lt.FunType(lt.FunType(_, lb: lt.DataType),
@@ -219,19 +222,19 @@ object fromRise {
       lt.FunType(lt.FunType(_, lb: lt.DataType),
       lt.FunType(lt.ArrayType(n, la: lt.DataType), _)))
       =>
-        makeMap(MapGlobal(dim), n, la, lb)
+        makeMap(OpenCLPrimitives.Map(OpenCL.Global, dim), n, la, lb)
 
       case (ocl.MapLocal(dim),
       lt.FunType(lt.FunType(_, lb: lt.DataType),
       lt.FunType(lt.ArrayType(n, la: lt.DataType), _)))
       =>
-        makeMap(MapLocal(dim), n, la, lb)
+        makeMap(OpenCLPrimitives.Map(OpenCL.Local, dim), n, la, lb)
 
       case (ocl.MapWorkGroup(dim),
       lt.FunType(lt.FunType(_, lb: lt.DataType),
       lt.FunType(lt.ArrayType(n, la: lt.DataType), _)))
       =>
-        makeMap(MapWorkGroup(dim), n, la, lb)
+        makeMap(OpenCLPrimitives.Map(OpenCL.WorkGroup, dim), n, la, lb)
 
       case (core.DepMapSeq(),
       lt.FunType(

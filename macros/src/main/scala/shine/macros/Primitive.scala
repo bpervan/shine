@@ -6,9 +6,19 @@ import scala.language.experimental.macros
 
 object Primitive {
 
-  @compileTimeOnly("primitive macro")
+  @compileTimeOnly("ExpPrimitive macro")
   class expPrimitive extends StaticAnnotation {
     def macroTransform(annottees: Any*): Any = macro Impl.expPrimitive
+  }
+
+  @compileTimeOnly("AccPrimitive macro")
+  class accPrimitive extends StaticAnnotation {
+    def macroTransform(annottees: Any*): Any = macro Impl.accPrimitive
+  }
+
+  @compileTimeOnly("CommandPrimitive macro")
+  class comPrimitive extends StaticAnnotation {
+    def macroTransform(annottees: Any*): Any = macro Impl.comPrimitive
   }
 
   class Impl(val c: blackbox.Context) {
@@ -20,6 +30,26 @@ object Primitive {
           c.Expr(expPrimitivesFromClassDef(cdef))
         case (cdef: ClassDef) :: (md: ModuleDef) :: Nil =>
           c.Expr(q"{${expPrimitivesFromClassDef(cdef)}; $md}")
+        case _ => c.abort(c.enclosingPosition, "expected a class definition")
+      }
+    }
+
+    def accPrimitive(annottees: c.Expr[Any]*): c.Expr[Any] = {
+      annottees.map(_.tree) match {
+        case (cdef: ClassDef) :: Nil =>
+          c.Expr(accPrimitivesFromClassDef(cdef))
+        case (cdef: ClassDef) :: (md: ModuleDef) :: Nil =>
+          c.Expr(q"{${accPrimitivesFromClassDef(cdef)}; $md}")
+        case _ => c.abort(c.enclosingPosition, "expected a class definition")
+      }
+    }
+
+    def comPrimitive(annottees: c.Expr[Any]*): c.Expr[Any] = {
+      annottees.map(_.tree) match {
+        case (cdef: ClassDef) :: Nil =>
+          c.Expr(comPrimitivesFromClassDef(cdef))
+        case (cdef: ClassDef) :: (md: ModuleDef) :: Nil =>
+          c.Expr(q"{${comPrimitivesFromClassDef(cdef)}; $md}")
         case _ => c.abort(c.enclosingPosition, "expected a class definition")
       }
     }
@@ -69,6 +99,7 @@ object Primitive {
                        additionalParams: List[ValDef],
                        params: List[ValDef]): Tree = {
       def makeAttributes(params: List[ValDef]): (List[ValDef], Tree) = {
+        if (params.isEmpty) return (params, q"scala.xml.Null")
         params.head match {
           case ValDef(_, name, tpt, _) => tpt match {
             case Ident(TypeName("DataType")) | Ident(TypeName("ScalarType")) |
@@ -201,6 +232,168 @@ object Primitive {
       case q"""final case class $name(..$additionalParams)
                                      (..$params) extends $_ {..$body} """ =>
         makeExpPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          additionalParams.asInstanceOf[List[ValDef]],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case _ =>
+        c.abort(c.enclosingPosition, "expected a case class extends Primitive")
+    }
+
+    def makeAccPrimitiveClass(name: TypeName,
+                              additionalParams: List[ValDef],
+                              params: List[ValDef],
+                              body: List[Tree]): ClassDef = {
+      var visitAndRebuildMissing = true
+      var xmlPrinterMissing = true
+      body.foreach {
+        case DefDef(_, TermName("visitAndRebuild"), _, _, _, _) =>
+          visitAndRebuildMissing = false
+        case DefDef(_, TermName("xmlPrinter"), _, _, _, _) =>
+          xmlPrinterMissing = false
+        case _ =>
+      }
+
+      val generated = q"""
+          ${if (visitAndRebuildMissing)
+        makeVisitAndRebuild(name, additionalParams, params)
+      else q""}
+
+          ${if (xmlPrinterMissing)
+        makeXMLPrinter(name, additionalParams, params)
+      else q""}
+         """
+
+      val accClass = (additionalParams match {
+        case List() =>
+          q"""
+          final case class $name(..$params) extends AccPrimitive {
+            ..$body
+            ..$generated
+          }
+         """
+        case _ =>
+          val newParams = params map {
+            case ValDef(_, name, tpt, rhs) if rhs.isEmpty => q"val $name : $tpt"
+            case ValDef(_, name, tpt, rhs) => q"val $name : $tpt = $rhs"
+          }
+          q"""
+          final case class $name(..$additionalParams)
+                                (..$newParams) extends AccPrimitive {
+            ..$body
+            ..$generated
+          }
+         """
+      }).asInstanceOf[ClassDef]
+
+      //      println(accClass)
+      accClass
+    }
+
+    def accPrimitivesFromClassDef: ClassDef => ClassDef = {
+      case q"case class $name(..$params) extends $_ {..$body} " =>
+        makeAccPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          List(),
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"final case class $name(..$params) extends $_ {..$body} " =>
+        makeAccPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          List(),
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"""case class $name(..$additionalParams)
+                               (..$params) extends $_ {..$body} """ =>
+        makeAccPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          additionalParams.asInstanceOf[List[ValDef]],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"""final case class $name(..$additionalParams)
+                                     (..$params) extends $_ {..$body} """ =>
+        makeAccPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          additionalParams.asInstanceOf[List[ValDef]],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case _ =>
+        c.abort(c.enclosingPosition, "expected a case class extends Primitive")
+    }
+
+    def makeComPrimitiveClass(name: TypeName,
+                              additionalParams: List[ValDef],
+                              params: List[ValDef],
+                              body: List[Tree]): ClassDef = {
+      var visitAndRebuildMissing = true
+      var xmlPrinterMissing = true
+      body.foreach {
+        case DefDef(_, TermName("visitAndRebuild"), _, _, _, _) =>
+          visitAndRebuildMissing = false
+        case DefDef(_, TermName("xmlPrinter"), _, _, _, _) =>
+          xmlPrinterMissing = false
+        case _ =>
+      }
+
+      val generated = q"""
+          ${if (visitAndRebuildMissing)
+        makeVisitAndRebuild(name, additionalParams, params)
+      else q""}
+
+          ${if (xmlPrinterMissing)
+        makeXMLPrinter(name, additionalParams, params)
+      else q""}
+         """
+
+      val accClass = (additionalParams match {
+        case List() =>
+          q"""
+          final case class $name(..$params) extends CommandPrimitive {
+            ..$body
+            ..$generated
+          }
+         """
+        case _ =>
+          val newParams = params map {
+            case ValDef(_, name, tpt, rhs) if rhs.isEmpty => q"val $name : $tpt"
+            case ValDef(_, name, tpt, rhs) => q"val $name : $tpt = $rhs"
+          }
+          q"""
+          final case class $name(..$additionalParams)
+                                (..$newParams) extends CommandPrimitive {
+            ..$body
+            ..$generated
+          }
+         """
+      }).asInstanceOf[ClassDef]
+
+      //      println(accClass)
+      accClass
+    }
+
+    def comPrimitivesFromClassDef: ClassDef => ClassDef = {
+      case q"case class $name(..$params) extends $_ {..$body} " =>
+        makeComPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          List(),
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"final case class $name(..$params) extends $_ {..$body} " =>
+        makeComPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          List(),
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"""case class $name(..$additionalParams)
+                               (..$params) extends $_ {..$body} """ =>
+        makeComPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          additionalParams.asInstanceOf[List[ValDef]],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"""final case class $name(..$additionalParams)
+                                     (..$params) extends $_ {..$body} """ =>
+        makeComPrimitiveClass(
           name.asInstanceOf[c.TypeName],
           additionalParams.asInstanceOf[List[ValDef]],
           params.asInstanceOf[List[ValDef]],

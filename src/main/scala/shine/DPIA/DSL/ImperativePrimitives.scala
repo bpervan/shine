@@ -86,4 +86,6 @@ object recordAcc2 {
     PairAcc2(fstT, sndT, record)
 }
 
-object skip extends Skip
+object skip {
+  def apply(): Skip = Skip()
+}

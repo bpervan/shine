@@ -9,16 +9,18 @@ import shine.DPIA.Semantics.OperationalSemantics.{ArrayData, Data, Store}
 import shine.DPIA.Types.DataType._
 import shine.DPIA.Types._
 import shine.DPIA._
-import shine.OpenCL.IntermediatePrimitives.MapGlobalI
+import shine.OpenCL.IntermediatePrimitives._
+import shine.OpenCL._
 import shine.macros.Primitive.expPrimitive
 
 @expPrimitive
-final case class MapGlobal(dim: Int)
-                          (val n: Nat,
-                           val dt1: DataType,
-                           val dt2: DataType,
-                           val f: Phrase[ExpType ->: ExpType],
-                           val array: Phrase[ExpType]) extends ExpPrimitive
+final case class Map(level: ParallelismLevel,
+                     dim: Int)
+                    (val n: Nat,
+                     val dt1: DataType,
+                     val dt2: DataType,
+                     val f: Phrase[ExpType ->: ExpType],
+                     val array: Phrase[ExpType]) extends ExpPrimitive
 {
   f :: expT(dt1, read) ->: expT(dt2, write)
   array :: expT(n`.`dt1, read)
@@ -28,9 +30,10 @@ final case class MapGlobal(dim: Int)
                                   (implicit context: TranslationContext
                                   ): Phrase[CommType] = {
     con(array)(λ(expT(n`.`dt1, read))(x =>
-      MapGlobalI(dim)(n, dt1, dt2,
+      MapI(level, dim)(n, dt1, dt2,
         λ(expT(dt1, read))(x => λ(accT(dt2))(o => acc(f(x))(o))),
-        x, A)))
+        x, A)
+    ))
   }
 
   override def continuationTranslation(C: Phrase[ExpType ->: CommType])

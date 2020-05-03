@@ -3,7 +3,7 @@ package shine.DPIA.FunctionalPrimitives
 import shine.DPIA.Compilation.TranslationContext
 import shine.DPIA.Compilation.TranslationToImperative.{acc, con, fedAcc}
 import shine.DPIA.DSL._
-import shine.DPIA.ImperativePrimitives.{MapAcc, MapRead}
+import shine.DPIA.ImperativePrimitives.MapAcc
 import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.OperationalSemantics
 import shine.DPIA.Semantics.OperationalSemantics._
@@ -55,7 +55,7 @@ final case class Map(n: Nat,
                                       (implicit context: TranslationContext
                                       ): Phrase[CommType] = {
     con(array)(λ(expT(n`.`dt1, read))(x =>
-      C(MapRead(n, dt1, dt2,
+      C(Map.MapRead(n, dt1, dt2,
         fun(expT(dt1, read))(a =>
           fun(expT(dt2, read) ->: (comm: CommType))(cont =>
             con(f(a))(fun(expT(dt2, read))(b => Apply(cont, b))))),
@@ -72,5 +72,30 @@ final case class Map(n: Nat,
 
       case _ => throw new Exception("This should not happen")
     }
+  }
+}
+
+object Map {
+  @expPrimitive
+  final case class MapRead(n: Nat,
+                           dt1: DataType,
+                           dt2: DataType,
+                           f: Phrase[ExpType ->: (ExpType ->: CommType) ->: CommType],
+                           input: Phrase[ExpType])
+    extends ExpPrimitive
+  {
+    f :: expT(dt1, read) ->: (expT(dt2, read) ->: comm) ->: comm
+    input :: expT(n`.`dt1, read)
+    override val t: ExpType = expT(n`.`dt2, read)
+
+    override def acceptorTranslation(A: Phrase[AccType])
+                                    (implicit context: TranslationContext
+                                    ): Phrase[CommType] =
+      throw new Exception("This should not happen")
+
+    override def continuationTranslation(C: Phrase[->:[ExpType, CommType]])
+                                        (implicit context: TranslationContext
+                                        ): Phrase[CommType] =
+      throw new Exception("This should not happen")
   }
 }

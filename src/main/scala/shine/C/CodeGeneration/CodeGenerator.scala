@@ -431,7 +431,7 @@ class CodeGenerator(val decls: CodeGenerator.Declarations,
       }
 
       // TODO: we could get rid of that
-      case MapRead(n, dt1, dt2, f, e) => path match {
+      case Map.MapRead(n, dt1, dt2, f, e) => path match {
         case (i : CIntExpr) :: ps =>
           val continue_cmd =
             Identifier[ExpType ->: CommType](s"continue_$freshName", ExpType(dt2, read) ->: comm)
@@ -444,7 +444,7 @@ class CodeGenerator(val decls: CodeGenerator.Declarations,
         case _ => error(s"Expected path to be not empty")
       }
 
-      case GenerateCont(n, dt, f) => path match {
+      case Generate.GenerateCont(n, dt, f) => path match {
         case (i : CIntExpr) :: ps =>
           val continue_cmd =
             Identifier[ExpType ->: CommType](s"continue_$freshName", ExpType(dt, read) ->: comm)

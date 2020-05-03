@@ -2,20 +2,9 @@ package shine.DPIA.ImperativePrimitives
 
 import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.OperationalSemantics._
-import shine.DPIA.Types._
+import shine.macros.Primitive.comPrimitive
 
-import scala.xml.Elem
-
-// not final because of DSL.typed.skip
+@comPrimitive
 case class Skip() extends CommandPrimitive {
-
-  override val t: CommType = comm
-
   override def eval(s: Store): Store = s
-
-  override def visitAndRebuild(f: VisitAndRebuild.Visitor): Phrase[CommType] = this
-
-  override def prettyPrint: String = "skip"
-
-  override def xmlPrinter: Elem = <skip/>
 }

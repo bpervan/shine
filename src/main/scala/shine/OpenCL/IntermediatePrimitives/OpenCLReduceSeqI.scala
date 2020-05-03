@@ -10,14 +10,14 @@ import shine.OpenCL.AdjustArraySizesForAllocations
 import shine.OpenCL.DSL._
 
 object OpenCLReduceSeqI {
-  def apply(n: Nat,
+  def apply(unroll: Boolean)
+           (n: Nat,
             initAddrSpace: shine.DPIA.Types.AddressSpace,
             dt1: DataType, dt2: DataType,
             f: Phrase[ExpType ->: ExpType ->: AccType ->: CommType],
             init: Phrase[ExpType],
             in: Phrase[ExpType],
-            out: Phrase[ExpType ->: CommType],
-            unroll: Boolean)
+            out: Phrase[ExpType ->: CommType])
            (implicit context: TranslationContext): Phrase[CommType] = {
     val adj = AdjustArraySizesForAllocations(init, dt2, initAddrSpace)
 

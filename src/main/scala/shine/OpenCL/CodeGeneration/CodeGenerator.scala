@@ -14,7 +14,7 @@ import shine.DPIA.Semantics.OperationalSemantics.VectorData
 import shine.DPIA.Types._
 import shine.DPIA._
 import shine.OpenCL.BuiltInFunctionCall
-import shine.OpenCL.FunctionalPrimitives.OpenCLFunction
+import shine.OpenCL.FunctionalPrimitives.{IdxDistribute, OpenCLFunction}
 import shine.OpenCL.ImperativePrimitives._
 import shine._
 

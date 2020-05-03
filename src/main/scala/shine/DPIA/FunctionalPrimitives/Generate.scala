@@ -2,7 +2,6 @@ package shine.DPIA.FunctionalPrimitives
 
 import shine.DPIA.Compilation.{TranslationContext, TranslationToImperative}
 import shine.DPIA.DSL._
-import shine.DPIA.ImperativePrimitives.GenerateCont
 import shine.DPIA.Phrases._
 import shine.DPIA.Types.DataType._
 import shine.DPIA.Types._
@@ -26,11 +25,33 @@ final case class Generate(n: Nat,
                              ): Phrase[CommType] = {
     import TranslationToImperative._
     // note: would not be necessary if generate was defined as indices + map
-    C(GenerateCont(n, dt,
+    C(Generate.GenerateCont(n, dt,
       fun(expT(idx(n), read))(i =>
         fun(expT(dt, read) ->: (comm: CommType))(cont =>
           con(f(i))(fun(expT(dt, read))(g => Apply(cont, g)))
         ))
     ))
+  }
+}
+
+object Generate {
+  @expPrimitive
+  final case class GenerateCont(n: Nat,
+                                dt: DataType,
+                                f: Phrase[ExpType ->: (ExpType ->: CommType) ->: CommType])
+    extends ExpPrimitive
+  {
+    f :: expT(idx(n), read) ->: (expT(dt, read) ->: comm) ->: comm
+    override val t: ExpType = expT(n`.`dt, read)
+
+    override def acceptorTranslation(A: Phrase[AccType])
+                                    (implicit context: TranslationContext
+                                    ): Phrase[CommType] =
+      throw new Exception("This should not happen")
+
+    override def continuationTranslation(C: Phrase[->:[ExpType, CommType]])
+                                        (implicit context: TranslationContext
+                                        ): Phrase[CommType] =
+      throw new Exception("This should not happen")
   }
 }
