@@ -12,13 +12,13 @@ import shine.DPIA._
 import shine.macros.Primitive.expPrimitive
 
 @expPrimitive
-final case class ReduceSeq(n: Nat,
-                           dt1: DataType,
-                           dt2: DataType,
-                           f: Phrase[ExpType ->: ExpType ->: ExpType],
-                           init: Phrase[ExpType],
-                           array: Phrase[ExpType],
-                           unroll: Boolean = false) extends ExpPrimitive
+final case class ReduceSeq(unroll: Boolean = false)
+                          (val n: Nat,
+                           val dt1: DataType,
+                           val dt2: DataType,
+                           val f: Phrase[ExpType ->: ExpType ->: ExpType],
+                           val init: Phrase[ExpType],
+                           val array: Phrase[ExpType]) extends ExpPrimitive
 {
   f :: expT(dt2, read) ->: expT(dt1, read) ->: expT(dt2, write)
   init :: expT(dt2, write)

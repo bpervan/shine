@@ -6,7 +6,6 @@ import shine.DPIA.Types._
 import shine.DPIA._
 import shine.OpenMP.DSL.parForNat
 
-//noinspection TypeAnnotation
 object DepMapParI {
   def apply(n: Nat,
             ft1:NatToData,

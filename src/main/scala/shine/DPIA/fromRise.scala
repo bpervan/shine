@@ -201,13 +201,13 @@ object fromRise {
       lt.FunType(lt.FunType(_, lb: lt.DataType),
       lt.FunType(lt.ArrayType(n, la: lt.DataType), _)))
       =>
-        makeMap(MapSeq, n, la, lb)
+        makeMap(MapSeq(unroll = false)(_, _, _, _, _), n, la, lb)
 
       case (core.MapSeqUnroll(),
       lt.FunType(lt.FunType(_, lb: lt.DataType),
       lt.FunType(lt.ArrayType(n, la: lt.DataType), _)))
       =>
-        makeMap(MapSeqUnroll, n, la, lb)
+        makeMap(MapSeq(unroll = true)(_, _, _, _, _), n, la, lb)
 
       case (omp.MapPar(),
       lt.FunType(lt.FunType(_, lb: lt.DataType),
@@ -245,7 +245,7 @@ object fromRise {
           k ->: (ExpType(a(k), read) ->: ExpType(b(k), read))
           , f =>
           fun[ExpType](ExpType(DepArrayType(n, a), read), e =>
-            DepMapSeq(n, a, b, f, e)))
+            DepMapSeq(unroll = false)(n, a, b, f, e)))
 
       case (core.ReduceSeq(),
       lt.FunType(_,
@@ -258,7 +258,7 @@ object fromRise {
           expT(b, read) ->: expT(a, read) ->: expT(b, write), f =>
           fun[ExpType](expT(b, read), i =>
             fun[ExpType](expT(n`.`a, read), e =>
-              ReduceSeq(n, a, b, f, i, e))))
+              ReduceSeq(unroll = false)(n, a, b, f, i, e))))
 
       case (core.ReduceSeqUnroll(),
       lt.FunType(_,
@@ -271,7 +271,7 @@ object fromRise {
           expT(b, read) ->: expT(a, read) ->: expT(b, write), f =>
           fun[ExpType](expT(b, read), i =>
             fun[ExpType](expT(n`.`a, read), e =>
-              ReduceSeq(n, a, b, f, i, e, unroll = true))))
+              ReduceSeq(unroll = true)(n, a, b, f, i, e))))
 
       case (ocl.OclReduceSeq(),
       lt.DepFunType(i: lt.AddressSpaceIdentifier,
@@ -287,7 +287,7 @@ object fromRise {
             expT(b, read) ->: expT(a, read) ->: expT(b, write), f =>
             fun[ExpType](expT(b, read), i =>
               fun[ExpType](expT(n`.`a, read), e =>
-                OpenCLReduceSeq(n, i_space, a, b, f, i, e, unroll = false)))))
+                OpenCLReduceSeq(unroll = false)(n, i_space, a, b, f, i, e)))))
 
       case (ocl.OclReduceSeqUnroll(),
       lt.DepFunType(i: lt.AddressSpaceIdentifier,
@@ -303,7 +303,7 @@ object fromRise {
             expT(b, read) ->: expT(a, read) ->: expT(b, write), f =>
             fun[ExpType](expT(b, read), i =>
               fun[ExpType](expT(n`.`a, read), e =>
-                OpenCLReduceSeq(n, i_space, a, b, f, i, e, unroll = true)))))
+                OpenCLReduceSeq(unroll = true)(n, i_space, a, b, f, i, e)))))
 
       case (core.ScanSeq(),
       lt.FunType(_,

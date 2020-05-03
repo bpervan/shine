@@ -31,10 +31,6 @@ final case class SlideSeq(rot: lp.SlideSeq.Rotate,
   input :: expT(inputSize`.`dt1, read)
   override val t: ExpType = expT(n`.`dt2, write)
 
-  override def eval(s: Store): Data = {
-    Map(n, ArrayType(sz, dt1), dt2, f, Slide(n, sz, sp, dt1, input)).eval(s)
-  }
-
   override def acceptorTranslation(A: Phrase[AccType])
                                   (implicit context: TranslationContext
                                   ): Phrase[CommType] = {
@@ -65,4 +61,7 @@ final case class SlideSeq(rot: lp.SlideSeq.Rotate,
       acc(this)(tmp.wr) `;` C(tmp.rd)
     ))
   }
+
+  override def eval(s: Store): Data =
+    Map(n, ArrayType(sz, dt1), dt2, f, Slide(n, sz, sp, dt1, input)).eval(s)
 }

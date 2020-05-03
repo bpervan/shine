@@ -11,7 +11,6 @@ import shine.DPIA._
 import shine.OpenMP.IntermediatePrimitives.ReduceParI
 import shine.macros.Primitive.expPrimitive
 
-
 @expPrimitive
 final case class ReducePar(n: Nat,
                            dt1: DataType, dt2: DataType,

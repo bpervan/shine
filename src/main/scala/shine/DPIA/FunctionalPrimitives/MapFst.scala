@@ -1,6 +1,7 @@
 package shine.DPIA.FunctionalPrimitives
 
-import shine.DPIA.Compilation.{TranslationContext, TranslationToImperative}
+import shine.DPIA.Compilation.TranslationContext
+import shine.DPIA.Compilation.TranslationToImperative._
 import shine.DPIA.DSL._
 import shine.DPIA.ImperativePrimitives.MapFstAcc
 import shine.DPIA.Phrases._
@@ -34,7 +35,6 @@ final case class MapFst(dt1: DataType,
                                Identifier[AccType]])
                               (C: Phrase[AccType ->: AccType]
                               ) : Phrase[AccType] = {
-    import TranslationToImperative._
     val x = Identifier(freshName("fede_x"), ExpType(dt1, read))
     val otype = AccType(dt3)
     val o = Identifier(freshName("fede_o"), otype)
@@ -48,7 +48,6 @@ final case class MapFst(dt1: DataType,
   override def acceptorTranslation(A: Phrase[AccType])
                                   (implicit context: TranslationContext
                                   ): Phrase[CommType] = {
-    import TranslationToImperative._
     val x = Identifier(freshName("fede_x"), ExpType(dt1, read))
     val otype = AccType(dt3)
     val o = Identifier(freshName("fede_o"), otype)
@@ -61,7 +60,6 @@ final case class MapFst(dt1: DataType,
   override def continuationTranslation(C: Phrase[ExpType ->: CommType])
                                       (implicit context: TranslationContext
                                       ): Phrase[CommType] = {
-    import TranslationToImperative._
     // assumption: f does not need to be translated, it does indexing only
     con(record)(fun(record.t)(x => C(MapFst(dt1, dt2, dt3, f, x))))
   }

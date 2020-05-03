@@ -26,7 +26,8 @@ object SlideSeqIIndices {
     val inputSize = step * n + size - step
 
     `new`(size`.`dt1, buffer => {
-      MapSeqI(size - 1, dt1, dt1, fun(expT(dt1, read))(exp => fun(accT(dt1))(acc => acc :=| dt1 | exp)),
+      MapSeqI(unroll = false)(size - 1, dt1, dt1,
+        fun(expT(dt1, read))(exp => fun(accT(dt1))(acc => acc :=| dt1 | exp)),
         Take(size - 1, inputSize - size + 1, read, dt1, input),
         TakeAcc(size - 1, size - size + 1, dt1, buffer.wr)) `;`
         ForNat(n, _Λ_[NatKind]()(i => {

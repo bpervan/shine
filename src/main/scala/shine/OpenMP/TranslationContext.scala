@@ -1,4 +1,5 @@
 package shine.OpenMP
+
 import shine.DPIA.DSL.λ
 import shine.DPIA.IntermediatePrimitives.MapVecI
 import shine.DPIA.Phrases.Phrase

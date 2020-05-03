@@ -11,21 +11,6 @@ object Primitive {
     def macroTransform(annottees: Any*): Any = macro Impl.expPrimitive
   }
 
-  class IdentityImpl(val c: blackbox.Context) {
-    def impl(annottees: c.Expr[Any]*): c.Expr[Any] = {
-      import c.universe._
-      val inputs = annottees.map(_.tree).toList
-      val (annottee, expandees) = inputs match {
-        case (param: ValDef) :: (rest @ _ :: _) => (param, rest)
-        case (param: TypeDef) :: (rest @ _ :: _) => (param, rest)
-        case _ => (EmptyTree, inputs)
-      }
-      println((annottee, expandees))
-      val outputs = expandees
-      c.Expr[Any](Block(outputs, Literal(Constant(()))))
-    }
-  }
-
   class Impl(val c: blackbox.Context) {
     import c.universe._
 
@@ -42,12 +27,19 @@ object Primitive {
     def makeLowerCaseName(s: String): String =
       Character.toLowerCase(s.charAt(0)) + s.substring(1)
 
-    def makeVisitAndRebuild(name: TypeName, params: List[ValDef]): Tree = {
+    def makeVisitAndRebuild(name: TypeName,
+                            additionalParams: List[ValDef],
+                            params: List[ValDef]): Tree = {
       val v = q"v"
       q"""
         override def visitAndRebuild(
           $v: shine.DPIA.Phrases.VisitAndRebuild.Visitor): $name
-        = new ${Apply(Ident(name), params.map {
+        = new ${Apply( additionalParams match {
+            case List() => Ident(name)
+            case _ => Apply(Ident(name), additionalParams.map {
+              case ValDef(_, name, _, _) => q"$name"
+            })
+          }, params.map {
           case ValDef(_, name, tpt, _) => tpt match {
               case Ident(TypeName("DataType")) | Ident(TypeName("ScalarType")) |
                    Ident(TypeName("BasicType"))     => q"$v.data($name)"
@@ -73,7 +65,9 @@ object Primitive {
       """
     }
 
-    def makeXMLPrinter(name: TypeName, params: List[ValDef]): Tree = {
+    def makeXMLPrinter(name: TypeName,
+                       additionalParams: List[ValDef],
+                       params: List[ValDef]): Tree = {
       def makeAttributes(params: List[ValDef]): (List[ValDef], Tree) = {
         params.head match {
           case ValDef(_, name, tpt, _) => tpt match {
@@ -135,6 +129,7 @@ object Primitive {
     }
 
     def makeExpPrimitiveClass(name: TypeName,
+                              additionalParams: List[ValDef],
                               params: List[ValDef],
                               body: List[Tree]): ClassDef = {
       var visitAndRebuildMissing = true
@@ -147,19 +142,39 @@ object Primitive {
         case _ =>
       }
 
-      val expClass = q"""
+      val generated = q"""
+          ${if (visitAndRebuildMissing)
+              makeVisitAndRebuild(name, additionalParams, params)
+            else q""}
+
+          ${if (xmlPrinterMissing)
+              makeXMLPrinter(name, additionalParams, params)
+            else q""}
+         """
+
+      val expClass = (additionalParams match {
+        case List() =>
+          q"""
           final case class $name(..$params) extends ExpPrimitive {
             ..$body
-
-            ${if (visitAndRebuildMissing)
-                makeVisitAndRebuild(name, params)
-              else q""}
-
-            ${if (xmlPrinterMissing) makeXMLPrinter(name, params) else q""}
+            ..$generated
           }
-         """.asInstanceOf[ClassDef]
+         """
+        case _ =>
+          val newParams = params map {
+            case ValDef(_, name, tpt, rhs) if rhs.isEmpty => q"val $name : $tpt"
+            case ValDef(_, name, tpt, rhs) => q"val $name : $tpt = $rhs"
+          }
+          q"""
+          final case class $name(..$additionalParams)
+                                (..$newParams) extends ExpPrimitive {
+            ..$body
+            ..$generated
+          }
+         """
+      }).asInstanceOf[ClassDef]
 
-      println(expClass)
+//      println(expClass)
       expClass
     }
 
@@ -167,11 +182,27 @@ object Primitive {
       case q"case class $name(..$params) extends $_ {..$body} " =>
         makeExpPrimitiveClass(
           name.asInstanceOf[c.TypeName],
+          List(),
           params.asInstanceOf[List[ValDef]],
           body.asInstanceOf[List[Tree]])
       case q"final case class $name(..$params) extends $_ {..$body} " =>
         makeExpPrimitiveClass(
           name.asInstanceOf[c.TypeName],
+          List(),
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"""case class $name(..$additionalParams)
+                               (..$params) extends $_ {..$body} """ =>
+        makeExpPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          additionalParams.asInstanceOf[List[ValDef]],
+          params.asInstanceOf[List[ValDef]],
+          body.asInstanceOf[List[Tree]])
+      case q"""final case class $name(..$additionalParams)
+                                     (..$params) extends $_ {..$body} """ =>
+        makeExpPrimitiveClass(
+          name.asInstanceOf[c.TypeName],
+          additionalParams.asInstanceOf[List[ValDef]],
           params.asInstanceOf[List[ValDef]],
           body.asInstanceOf[List[Tree]])
       case _ =>

@@ -66,7 +66,8 @@ object HoistMemoryAllocations {
       private def replaceNew(addressSpace: AddressSpace,
                              variable: Identifier[VarType],
                              body: Phrase[CommType]): Phrase[CommType] = {
-        // Replace `new` node by looking through the information from the `par for`s, ...
+        // Replace `new` node by looking through the information from the
+        // `par for`s, ...
         val (finalVariable, finalBody) = parForInfos.foldLeft((variable, body)) {
           // ... to rewrite the new's body given the oldParam, oldBody,
           // as well as the index `i` and length `n` of a `par for` ...
@@ -83,8 +84,9 @@ object HoistMemoryAllocations {
                   case OpenCL.Global =>
                     throw new Exception("This should not happen")
                 }
-              case AddressSpace.Private | AddressSpace.Constant | AddressSpaceIdentifier(_) =>
-                throw new Exception("This can't happen")
+              case AddressSpace.Private | AddressSpace.Constant |
+                   AddressSpaceIdentifier(_) =>
+                throw new Exception(s"This can't happen, found: $addressSpace")
             }
         }
 
