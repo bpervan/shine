@@ -6,9 +6,8 @@ import shine.DPIA.ImperativePrimitives._
 import shine.DPIA.Phrases._
 import shine.DPIA.Types._
 import shine.DPIA._
-import shine.OpenCL
-import shine.OpenCL.FunctionalPrimitives._
-import shine.OpenCL.ImperativePrimitives._
+import shine.OpenCL.Primitives.OpenCL
+import shine.OpenCL.Primitives.OpenCL.{IdxDistribute, IdxDistributeAcc}
 
 object AdjustArraySizesForAllocations {
   case class DataTypeAdjustment(accF: Phrase[AccType] => Phrase[AccType],
@@ -32,7 +31,7 @@ object AdjustArraySizesForAllocations {
   private def visitAndGatherInformation[T <: PhraseType](p: Phrase[T],
                                                  parallInfo: List[ParallelismInfo]): List[ParallelismInfo] = {
     p match {
-      case m@shine.OpenCL.FunctionalPrimitives.Map(level, dim) => level match {
+      case m@OpenCL.Map(level, dim) => level match {
         case Global => visitAndGatherInformation(m.f, BasicInfo(Global, dim) :: parallInfo)
         case Local => visitAndGatherInformation(m.f, BasicInfo(Local, dim) :: parallInfo)
         case WorkGroup => visitAndGatherInformation(m.f, BasicInfo(WorkGroup, dim) :: parallInfo)
@@ -41,7 +40,7 @@ object AdjustArraySizesForAllocations {
       case mS: MapSeq => visitAndGatherInformation(mS.f, BasicInfo(Sequential, -1) :: parallInfo)
 
       // FIXME: works for scalars
-      case _: OpenCLReduceSeq | _: OpenCLIterate => parallInfo
+      case _: OpenCL.ReduceSeq | _: OpenCL.Iterate => parallInfo
 
       case t: Pair =>
         val fstInfo = visitAndGatherInformation(t.fst, List.empty)
@@ -128,7 +127,7 @@ object AdjustArraySizesForAllocations {
           }
           val stride = determineStride(parallLevel, dim, addrSpace)
 
-          val outerDimension = OpenCL.FunctionalPrimitives.IdxDistribute(adjSize, oldSize, stride, parallLevel, adjElemT, E)
+          val outerDimension = IdxDistribute(adjSize, oldSize, stride, parallLevel, adjElemT, E)
 
           val arr = identifier(freshName("arr"), expT(adjElemT, read))
           val mapFunBody = adjustedExpr(parallInfo.tail, adjElemT, oldElemT, addrSpace)(arr)

@@ -1,4 +1,4 @@
-package shine.OpenCL.IntermediatePrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.DSL._
 import shine.DPIA.FunctionalPrimitives.{Drop, Take}
@@ -8,9 +8,7 @@ import shine.DPIA.Phrases._
 import shine.DPIA.Types._
 import shine.DPIA._
 
-import scala.language.reflectiveCalls
-
-object OpenCLSlideSeqIValues {
+object SlideSeqIValues {
   def apply(a: AddressSpace,
             n: Nat,
             size: Nat,

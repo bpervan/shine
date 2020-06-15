@@ -6,7 +6,7 @@ import shine.DPIA.FunctionalPrimitives.AsIndex
 import shine.DPIA.Phrases._
 import shine.DPIA.Types._
 import shine.OpenCL.CodeGeneration.HoistMemoryAllocations.AllocationInfo
-import shine.OpenCL.FunctionalPrimitives.OpenCLFunction
+import shine.OpenCL.Primitives.OpenCL.OpenCLFunction
 import shine.{C, DPIA, OpenCL}
 
 import scala.collection.mutable

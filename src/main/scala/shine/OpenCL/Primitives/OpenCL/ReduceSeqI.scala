@@ -1,4 +1,4 @@
-package shine.OpenCL.IntermediatePrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.Compilation.TranslationContext
 import shine.DPIA.Compilation.TranslationToImperative.acc
@@ -9,7 +9,7 @@ import shine.DPIA._
 import shine.OpenCL.AdjustArraySizesForAllocations
 import shine.OpenCL.DSL._
 
-object OpenCLReduceSeqI {
+object ReduceSeqI {
   def apply(unroll: Boolean)
            (n: Nat,
             initAddrSpace: shine.DPIA.Types.AddressSpace,

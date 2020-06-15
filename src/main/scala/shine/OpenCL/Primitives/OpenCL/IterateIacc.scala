@@ -1,16 +1,16 @@
-package shine.OpenCL.IntermediatePrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import arithexpr.arithmetic.{Cst, NamedVar, RangeAdd}
 import shine.DPIA.DSL.{newDoubleBuffer => _, _}
 import shine.DPIA.FunctionalPrimitives._
 import shine.DPIA.ImperativePrimitives.TakeAcc
 import shine.DPIA.Phrases._
-import shine.DPIA.Types._
 import shine.DPIA.Types.DataType._
+import shine.DPIA.Types._
 import shine.DPIA._
 import shine.OpenCL.DSL.newDoubleBuffer
 
-object OpenCLIterateIAcc {
+object IterateIacc {
   def apply(a: AddressSpace,
             n: Nat,
             m: Nat,

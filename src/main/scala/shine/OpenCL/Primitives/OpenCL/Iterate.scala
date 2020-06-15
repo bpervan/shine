@@ -1,23 +1,22 @@
-package shine.OpenCL.FunctionalPrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.Compilation.TranslationContext
 import shine.DPIA.Compilation.TranslationToImperative.{acc, con}
-import shine.DPIA.DSL._
-import shine.DPIA.Phrases._
+import shine.DPIA.DSL.{_Λ_, λ, _}
+import shine.DPIA.Phrases.{ExpPrimitive, Phrase}
 import shine.DPIA.Types.DataType._
-import shine.DPIA.Types._
-import shine.DPIA._
-import shine.OpenCL.IntermediatePrimitives.OpenCLIterateIAcc
+import shine.DPIA.Types.{AccType, AddressSpace, CommType, DataType, ExpType, NatKind, read, _}
+import shine.DPIA.{->:, Nat, `(nat)->:`, accT, expT, _}
 import shine.macros.Primitive.expPrimitive
 
 @expPrimitive
-final case class OpenCLIterate(a: AddressSpace,
-                               n: Nat,
-                               m: Nat,
-                               k: Nat,
-                               dt: DataType,
-                               f: Phrase[`(nat)->:`[ExpType ->: ExpType]],
-                               array: Phrase[ExpType])
+final case class Iterate(a: AddressSpace,
+                         n: Nat,
+                         m: Nat,
+                         k: Nat,
+                         dt: DataType,
+                         f: Phrase[`(nat)->:`[ExpType ->: ExpType]],
+                         array: Phrase[ExpType])
   extends ExpPrimitive
 {
   f :: f.t.x ->: expT({f.t.x * n}`.`dt, read) ->: expT(f.t.x`.`dt, read)
@@ -28,7 +27,7 @@ final case class OpenCLIterate(a: AddressSpace,
                                   (implicit context: TranslationContext
                                   ): Phrase[CommType] =
     con(array)(λ(expT({m * n.pow(k)}`.`dt, read))(x =>
-      OpenCLIterateIAcc(a, n, m, k, dt, A,
+      IterateIacc(a, n, m, k, dt, A,
         _Λ_[NatKind]()(l => λ(accT(l`.`dt))(o =>
           λ(expT({l * n}`.`dt, read))(x => acc(f(l)(x))(o)))),
         x) ))

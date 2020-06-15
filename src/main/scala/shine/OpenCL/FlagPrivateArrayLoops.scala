@@ -6,7 +6,8 @@ import shine.DPIA.Phrases._
 import shine.DPIA.Semantics.OperationalSemantics.ArrayData
 import shine.DPIA.Types._
 import shine.DPIA._
-import shine.OpenCL.ImperativePrimitives._
+import shine.OpenCL.Primitives.OpenCL
+import shine.OpenCL.Primitives.OpenCL._
 
 import scala.collection.mutable
 
@@ -28,7 +29,7 @@ object FlagPrivateArrayLoops {
       extends VisitAndRebuild.Visitor
     {
       override def phrase[T <: PhraseType](p: Phrase[T]): Result[Phrase[T]] = p match {
-        case OpenCLNew(AddressSpace.Private, _, Lambda(i: Identifier[_], _)) =>
+        case OpenCL.New(AddressSpace.Private, _, Lambda(i: Identifier[_], _)) =>
           Continue(p, this.copy(privMemIdents = privMemIdents + i))
         case Idx(_, _, i, _) =>
           Continue(p, this.copy(indexingIdents = indexingIdents ++ collectIndexingIdents(i)))
@@ -40,10 +41,13 @@ object FlagPrivateArrayLoops {
         case Literal(ArrayData(_)) =>
           eliminateVars ++= indexingIdents
           Stop(p)
-        case OpenCLParFor(_, _, out, Lambda(i: Identifier[_], Lambda(o: Identifier[_], _)), _, _, _)
-        if collectIdents(out).exists(privMemIdents(_)) =>
-          eliminateVars += i.name
-          Continue(p, this.copy(privMemIdents = privMemIdents + o))
+        case pf: OpenCL.ParFor => pf.loopBody match {
+          case Lambda(i: Identifier[_], Lambda(o: Identifier[_], _))
+            if collectIdents(pf.out).exists(privMemIdents(_)) =>
+              eliminateVars += i.name
+              Continue(p, this.copy(privMemIdents = privMemIdents + o))
+          case _ => Continue(p, this)
+        }
         case _ =>
           Continue(p, this)
       }
@@ -63,30 +67,21 @@ object FlagPrivateArrayLoops {
         case ForNat(n, body @ DepLambda(i: NatIdentifier, _), _) if eliminateVars(i.name) =>
           eliminateVars -= i.name
           Continue(ForNat(n, body, unroll = true), this)
-        case pf@OpenCLParFor(n, dt, out, body @ Lambda(i: Identifier[_], _), init, step, _)
-          if eliminateVars(i.name) =>
+        case pf: OpenCL.ParFor => pf.loopBody match {
+          case Lambda(i: Identifier[_], _) if eliminateVars(i.name) =>
             eliminateVars -= i.name
-            pf match {
-              case ParForGlobal(dim) =>
-                Continue(ParForGlobal(dim)(n, dt, out, body, init, step, unroll = true), this)
-              case ParForLocal(dim) =>
-                Continue(ParForLocal(dim)(n, dt, out, body, init, step, unroll = true), this)
-              case ParForWorkGroup(dim) =>
-                Continue(ParForWorkGroup(dim)(n, dt, out, body, init, step, unroll = true), this)
-            }
-        case pf@OpenCLParForNat(n, dt, out, body @ DepLambda(i: NatIdentifier, _), init, step, _)
-          if eliminateVars(i.name) =>
-            eliminateVars -= i.name
-            pf match {
-              case ParForNatGlobal(dim) =>
-                Continue(ParForNatGlobal(dim)(n, dt, out, body, init, step, unroll = true), this)
-              case ParForNatLocal(dim) =>
-                Continue(ParForNatLocal(dim)(n, dt, out, body, init, step, unroll = true), this)
-              case ParForNatWorkGroup(dim) =>
-                Continue(ParForNatWorkGroup(dim)(n, dt, out, body, init, step, unroll = true), this)
+            Continue(ParFor(pf.level, pf.dim, unroll = true)
+                           (pf.n, pf.dt, pf.out, pf.loopBody), this)
+          case _ => Continue(p, this)
         }
-        case _ =>
-          Continue(p, this)
+        case pf: OpenCL.ParForNat => pf.loopBody match {
+          case DepLambda(i: NatIdentifier, _) if eliminateVars(i.name) =>
+            eliminateVars -= i.name
+            Continue(ParForNat(pf.level, pf.dim, unroll = true)
+                              (pf.n, pf.ft, pf.out, pf.loopBody), this)
+          case _ => Continue(p, this)
+        }
+        case _ => Continue(p, this)
       }
     })
   }

@@ -1,32 +1,31 @@
-package shine.OpenCL.FunctionalPrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import arithexpr.arithmetic.SimplifiedExpr
 import rise.core.{primitives => lp}
 import shine.DPIA.Compilation.TranslationContext
-import shine.DPIA.Compilation.TranslationToImperative._
-import shine.DPIA.DSL._
+import shine.DPIA.Compilation.TranslationToImperative.{acc, con}
+import shine.DPIA.DSL.{fun, _}
 import shine.DPIA.FunctionalPrimitives.Slide
-import shine.DPIA.Phrases._
+import shine.DPIA.Phrases.{ExpPrimitive, Phrase}
 import shine.DPIA.Semantics.OperationalSemantics.{Data, Store}
 import shine.DPIA.Types.DataType._
-import shine.DPIA.Types._
-import shine.DPIA._
-import shine.OpenCL.IntermediatePrimitives.OpenCLSlideSeqIValues
+import shine.DPIA.Types.{AccType, AddressSpace, ArrayType, CommType, DataType, ExpType, read, write, _}
+import shine.DPIA.{->:, Nat, accT, expT, _}
 import shine.macros.Primitive.expPrimitive
 
 // performs a sequential slide, taking advantage of the space/time overlapping
 // reuse opportunity
 @expPrimitive
-final case class OpenCLSlideSeq(rot: lp.SlideSeq.Rotate,
-                                a: AddressSpace,
-                                n: Nat,
-                                sz: Nat,
-                                sp: Nat,
-                                dt1: DataType,
-                                dt2: DataType,
-                                write_dt1: Phrase[ExpType ->: ExpType],
-                                f: Phrase[ExpType ->: ExpType],
-                                input: Phrase[ExpType])extends ExpPrimitive
+final case class SlideSeq(rot: lp.SlideSeq.Rotate)
+                         (val a: AddressSpace,
+                          val n: Nat,
+                          val sz: Nat,
+                          val sp: Nat,
+                          val dt1: DataType,
+                          val dt2: DataType,
+                          val write_dt1: Phrase[ExpType ->: ExpType],
+                          val f: Phrase[ExpType ->: ExpType],
+                          val input: Phrase[ExpType]) extends ExpPrimitive
 {
   val inputSize: Nat with SimplifiedExpr = sp * n + sz - sp
 
@@ -39,7 +38,7 @@ final case class OpenCLSlideSeq(rot: lp.SlideSeq.Rotate,
                                   (implicit context: TranslationContext
                                   ): Phrase[CommType] = {
     val I = rot match {
-      case lp.SlideSeq.Values => OpenCLSlideSeqIValues.apply _
+      case lp.SlideSeq.Values => SlideSeqIValues.apply _
       case lp.SlideSeq.Indices => ??? // SlideSeqIIndices.apply _
     }
     con(input)(fun(expT(inputSize`.`dt1, read))(x =>

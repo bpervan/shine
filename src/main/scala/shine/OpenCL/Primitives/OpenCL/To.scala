@@ -1,13 +1,13 @@
-package shine.OpenCL.FunctionalPrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.Compilation.TranslationContext
-import shine.DPIA.Compilation.TranslationToImperative._
+import shine.DPIA.Compilation.TranslationToImperative.acc
 import shine.DPIA.DSL.{`new` => _, _}
-import shine.DPIA.Phrases._
+import shine.DPIA.Phrases.{ExpPrimitive, Phrase}
 import shine.DPIA.Semantics.OperationalSemantics
 import shine.DPIA.Semantics.OperationalSemantics.{Data, Store}
-import shine.DPIA.Types._
-import shine.DPIA._
+import shine.DPIA.Types.{AccType, AddressSpace, CommType, DataType, ExpType, read, write, _}
+import shine.DPIA.{->:, expT}
 import shine.OpenCL.AdjustArraySizesForAllocations
 import shine.OpenCL.DSL.`new`
 import shine.macros.Primitive.expPrimitive

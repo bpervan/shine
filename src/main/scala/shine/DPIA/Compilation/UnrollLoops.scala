@@ -7,7 +7,7 @@ import shine.DPIA.ImperativePrimitives._
 import shine.DPIA.Phrases._
 import shine.DPIA.Types._
 import shine.DPIA._
-import shine.OpenCL.ImperativePrimitives.OpenCLParFor
+import shine.OpenCL.Primitives.OpenCL
 
 object UnrollLoops {
   def apply(p: Phrase[CommType]): Phrase[CommType] = {
@@ -17,14 +17,18 @@ object UnrollLoops {
           Continue(unrollLoop(n, init=0, step=1, i => Phrase.substitute(AsIndex(n, Natural(i)), `for`=ident, in=body)), this)
         case ForNat(n, DepLambda(ident: NatIdentifier, body), true) =>
           Continue(unrollLoop(n, init=0, step=1, i => PhraseType.substitute(i, `for`=ident, in=body)), this)
-        case OpenCLParFor(n, _, out, Lambda(ident: Identifier[_], Lambda(identOut: Identifier[_], body)), init, step, true) =>
-          out.t.dataType match {
-            case ArrayType(_, elemType) =>
-              Continue(unrollLoop(n, init, step, i => Phrase.substitute(IdxAcc(n, elemType, AsIndex(n, Natural(i)), out),
-                `for`=identOut,
-                Phrase.substitute(AsIndex(n, Natural(i)), `for`=ident, in=body))), this)
-            case _ => throw new Exception("OpenCLParFor acceptor has to be of ArrayType.")
-          }
+        case pf : OpenCL.ParFor if pf.unroll => pf.loopBody match {
+          case Lambda(ident: Identifier[_], Lambda(identOut: Identifier[_], body)) =>
+            pf.out.t.dataType match {
+              case ArrayType(_, elemType) =>
+                Continue(unrollLoop(pf.n, pf.init, pf.step, i => Phrase.substitute(IdxAcc(pf.n, elemType, AsIndex(pf.n, Natural(i)), pf.out),
+                  `for`=identOut,
+                  Phrase.substitute(AsIndex(pf.n, Natural(i)), `for`=ident, in=body))), this)
+              case _ => throw new Exception("OpenCLParFor acceptor has to be of ArrayType.")
+            }
+          case _ =>
+            Continue(p, this)
+        }
         case _ =>
           Continue(p, this)
       }

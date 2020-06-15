@@ -1,4 +1,4 @@
-package shine.OpenCL.ImperativePrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.Phrases.CommandPrimitive
 import shine.DPIA.Semantics.OperationalSemantics.Store

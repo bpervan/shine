@@ -1,14 +1,12 @@
-package shine.OpenCL.FunctionalPrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.Compilation.TranslationContext
 import shine.DPIA.Compilation.TranslationToImperative.con
-import shine.DPIA.DSL._
-import shine.DPIA.Phrases._
-import shine.DPIA.Types._
-import shine.DPIA._
+import shine.DPIA.DSL.{λ, _}
+import shine.DPIA.Phrases.{ExpPrimitive, Phrase, PrettyPhrasePrinter}
+import shine.DPIA.Types.{AccType, CommType, DataType, ExpType, read, _}
+import shine.DPIA.{->:, expT}
 import shine.macros.Primitive.expPrimitive
-
-import scala.language.reflectiveCalls
 
 @expPrimitive
 final case class OpenCLFunction(name: String,

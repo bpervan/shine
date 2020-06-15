@@ -13,9 +13,8 @@ import shine.DPIA.Semantics.OperationalSemantics
 import shine.DPIA.Semantics.OperationalSemantics.VectorData
 import shine.DPIA.Types._
 import shine.DPIA._
-import shine.OpenCL.BuiltInFunctionCall
-import shine.OpenCL.FunctionalPrimitives.{IdxDistribute, OpenCLFunction}
-import shine.OpenCL.ImperativePrimitives._
+import shine.OpenCL.Primitives.OpenCL._
+import shine.OpenCL.{BuiltInFunctionCall, Primitives}
 import shine._
 
 import scala.collection.{immutable, mutable}
@@ -35,11 +34,21 @@ class CodeGenerator(override val decls: CCodeGenerator.Declarations,
 
   override def cmd(phrase: Phrase[CommType], env: Environment): Stmt = {
     phrase match {
-      case f@OpenCLParFor(n, dt, a, Lambda(i, Lambda(o, p)), _, _, _) =>
-        OpenCLCodeGen.codeGenOpenCLParFor(f, n, dt, a, i, o, p, env)
+      // case f@ParFor(n, dt, a, Lambda(i, Lambda(o, p)), _, _) =>
+      case f: ParFor =>
+        f.loopBody match {
+          case Lambda(i, Lambda(o, p)) =>
+            OpenCLCodeGen.codeGenOpenCLParFor(f, f.n, f.out, i, o, p, env)
+          case _ => super.cmd(phrase, env)
+        }
 
-      case f@OpenCLParForNat(n, _, a, DepLambda(i: NatIdentifier, Lambda(o, p)), _, _, _) =>
-        OpenCLCodeGen.codeGenOpenCLParForNat(f, n, a, i, o, p, env)
+        // (n, _, a, DepLambda(i: NatIdentifier, Lambda(o, p)), _, _, _)
+      case f: ParForNat =>
+        f.loopBody match {
+          case DepLambda(i: NatIdentifier, Lambda(o, p)) =>
+            OpenCLCodeGen.codeGenOpenCLParForNat(f, f.n, f.out, i, o, p, env)
+          case _ => super.cmd(phrase, env)
+        }
 
       case Assign(dt, a, e) => dt match {
         case VectorType(_, _) =>
@@ -55,15 +64,17 @@ class CodeGenerator(override val decls: CCodeGenerator.Declarations,
         case _ => super.cmd(phrase, env)
       }
 
-      case OpenCLNew(a, dt, Lambda(v, p)) => OpenCLCodeGen.codeGenOpenCLNew(a, dt, v, p, env)
-      case _: New => throw new Exception("New without address space found in OpenCL program.")
+      case Primitives.OpenCL.New(a, dt, Lambda(v, p)) => OpenCLCodeGen.codeGenOpenCLNew(a, dt, v, p, env)
+      case _: shine.DPIA.ImperativePrimitives.New =>
+        throw new Exception("New without address space found in OpenCL program.")
 
-      case OpenCLNewDoubleBuffer(a, _, _, dt, n, in, out, Lambda(ps, p)) =>
+      case Primitives.OpenCL.NewDoubleBuffer(a, _, _, dt, n, in, out, Lambda(ps, p)) =>
         OpenCLCodeGen.codeGenOpenCLNewDoubleBuffer(a, ArrayType(n, dt), in, out, ps, p, env)
 
       case Barrier(localMemFence, globalMemFence) => OpenCL.AST.Barrier(localMemFence, globalMemFence)
 
-      case _: NewDoubleBuffer => throw new Exception("NewDoubleBuffer without address space found in OpenCL program.")
+      case _: shine.DPIA.ImperativePrimitives.NewDoubleBuffer =>
+        throw new Exception("NewDoubleBuffer without address space found in OpenCL program.")
 
       case _ => super.cmd(phrase, env)
     }
@@ -291,9 +302,8 @@ class CodeGenerator(override val decls: CCodeGenerator.Declarations,
       ))
     }
 
-    def codeGenOpenCLParFor(f: OpenCLParFor,
+    def codeGenOpenCLParFor(f: ParFor,
                             n: Nat,
-                            dt: DataType,
                             a: Phrase[AccType],
                             i: Identifier[ExpType],
                             o: Phrase[AccType],
@@ -338,7 +348,7 @@ class CodeGenerator(override val decls: CCodeGenerator.Declarations,
         }}))})
     }
 
-    def codeGenOpenCLParForNat(f: OpenCLParForNat,
+    def codeGenOpenCLParForNat(f: ParForNat,
                                n: Nat,
                                a: Phrase[AccType],
                                i: NatIdentifier,

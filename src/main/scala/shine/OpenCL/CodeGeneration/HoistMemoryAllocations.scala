@@ -7,7 +7,8 @@ import shine.DPIA.Phrases.{VisitAndRebuild, _}
 import shine.DPIA.Types._
 import shine.DPIA.Types.DataType._
 import shine.DPIA._
-import shine.OpenCL.ImperativePrimitives.{OpenCLNew, OpenCLParFor, OpenCLParForNat}
+import shine.OpenCL.Primitives
+import shine.OpenCL.Primitives.OpenCL.{ParFor, ParForNat}
 import shine._
 
 object HoistMemoryAllocations {
@@ -48,13 +49,13 @@ object HoistMemoryAllocations {
             Visitor(ParForInfo(OpenCL.Sequential, Min(1, f.n), Right(0)) :: parForInfos))
           case f: ForNat => Continue(f,
             Visitor(ParForInfo(OpenCL.Sequential, Min(1, f.n), Right(0)) :: parForInfos))
-          case pf: OpenCLParFor =>
+          case pf: ParFor =>
             val t = pf.step
             Continue(pf,
-              Visitor(ParForInfo(pf.parallelismLevel, Min(t, pf.n), Right(pf.init)) :: parForInfos))
-          case pfn: OpenCLParForNat => ???
+              Visitor(ParForInfo(pf.level, Min(t, pf.n), Right(pf.init)) :: parForInfos))
+          case pfn: ParForNat => ???
 
-          case OpenCLNew(addressSpace, _, Lambda(variable, body))  if addressSpace != AddressSpace.Private =>
+          case Primitives.OpenCL.New(addressSpace, _, Lambda(variable, body))  if addressSpace != AddressSpace.Private =>
             Stop( // TODO? there might be fors and news in the body
               replaceNew(addressSpace.asInstanceOf[AddressSpace],
                 variable, body)).asInstanceOf[Result[Phrase[T]]]

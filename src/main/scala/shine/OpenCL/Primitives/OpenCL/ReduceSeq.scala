@@ -1,24 +1,23 @@
-package shine.OpenCL.FunctionalPrimitives
+package shine.OpenCL.Primitives.OpenCL
 
-import shine.DPIA.Compilation.TranslationToImperative._
-import shine.DPIA.Compilation._
-import shine.DPIA.DSL._
-import shine.DPIA.Phrases._
+import shine.DPIA.Compilation.TranslationContext
+import shine.DPIA.Compilation.TranslationToImperative.{acc, con}
+import shine.DPIA.DSL.{λ, _}
+import shine.DPIA.Phrases.{ExpPrimitive, Phrase}
 import shine.DPIA.Types.DataType._
-import shine.DPIA.Types._
-import shine.DPIA._
-import shine.OpenCL.IntermediatePrimitives.OpenCLReduceSeqI
+import shine.DPIA.Types.{AccType, AddressSpace, CommType, DataType, ExpType, read, write, _}
+import shine.DPIA.{->:, Nat, accT, expT, _}
 import shine.macros.Primitive.expPrimitive
 
 @expPrimitive
-final case class OpenCLReduceSeq(unroll: Boolean)
-                                (val n: Nat,
-                                 val initAddrSpace: AddressSpace,
-                                 val dt1: DataType,
-                                 val dt2: DataType,
-                                 val f: Phrase[ExpType ->: ExpType ->: ExpType],
-                                 val init: Phrase[ExpType],
-                                 val array: Phrase[ExpType])
+final case class ReduceSeq(unroll: Boolean)
+                          (val n: Nat,
+                           val initAddrSpace: AddressSpace,
+                           val dt1: DataType,
+                           val dt2: DataType,
+                           val f: Phrase[ExpType ->: ExpType ->: ExpType],
+                           val init: Phrase[ExpType],
+                           val array: Phrase[ExpType])
   extends ExpPrimitive
 {
   f :: expT(dt2, read) ->: expT(dt1, read) ->: expT(dt2, read)
@@ -33,7 +32,7 @@ final case class OpenCLReduceSeq(unroll: Boolean)
     println("WARNING: opencl reduce seq acceptor translation is deprecated," +
       "implicit copies might happen")
     con(array)(λ(expT(n`.`dt1, read))(X =>
-      OpenCLReduceSeqI(unroll)(n, initAddrSpace, dt1, dt2,
+      ReduceSeqI(unroll)(n, initAddrSpace, dt1, dt2,
         λ(expT(dt2, read))(x => λ(expT(dt1, read))(y => λ(accT(dt2))(o =>
           acc( f(x)(y) )( o )))),
         init, X, λ(expT(dt2, write))(r => acc(r)(A)))(context)))
@@ -44,7 +43,7 @@ final case class OpenCLReduceSeq(unroll: Boolean)
                                       ): Phrase[CommType] = {
     //TODO same for ReduceSeq/AbstractReduce
     con(array)(λ(expT(n`.`dt1, read))(X =>
-      OpenCLReduceSeqI(unroll)(n, initAddrSpace, dt1, dt2,
+      ReduceSeqI(unroll)(n, initAddrSpace, dt1, dt2,
         λ(expT(dt2, read))(x => λ(expT(dt1, read))(y => λ(accT(dt2))(o =>
           acc( f(x)(y) )( o )))),
         init, X, C)(context)))

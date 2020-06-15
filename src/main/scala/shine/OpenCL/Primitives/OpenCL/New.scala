@@ -1,17 +1,17 @@
-package shine.OpenCL.ImperativePrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.DSL.identifier
-import shine.DPIA.Phrases._
+import shine.DPIA.Phrases.{CommandPrimitive, Phrase}
 import shine.DPIA.Semantics.OperationalSemantics
-import shine.DPIA.Semantics.OperationalSemantics._
-import shine.DPIA.Types._
-import shine.DPIA._
+import shine.DPIA.Semantics.OperationalSemantics.Store
+import shine.DPIA.Types.{AddressSpace, CommType, DataType, comm}
+import shine.DPIA.{->:, VarType, freshName, varT}
 import shine.macros.Primitive.comPrimitive
 
 @comPrimitive
-final case class OpenCLNew(a: AddressSpace,
-                           dt: DataType,
-                           f: Phrase[VarType ->: CommType])
+final case class New(a: AddressSpace,
+                     dt: DataType,
+                     f: Phrase[VarType ->: CommType])
   extends CommandPrimitive
 {
   f :: varT(dt) ->: comm

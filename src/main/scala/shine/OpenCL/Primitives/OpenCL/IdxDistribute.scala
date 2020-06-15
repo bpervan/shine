@@ -1,7 +1,7 @@
-package shine.OpenCL.FunctionalPrimitives
+package shine.OpenCL.Primitives.OpenCL
 
 import shine.DPIA.Compilation.TranslationContext
-import shine.DPIA.Phrases._
+import shine.DPIA.Phrases.{ExpPrimitive, Phrase}
 import shine.DPIA.Types.DataType._
 import shine.DPIA.Types.{AccType, CommType, DataType, ExpType, read, _}
 import shine.DPIA.{->:, Nat, expT}

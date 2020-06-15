@@ -345,7 +345,7 @@ object Primitive {
       else q""}
          """
 
-      val accClass = (additionalParams match {
+      val comClass = (additionalParams match {
         case List() =>
           q"""
           final case class $name(..$params) extends CommandPrimitive {
@@ -367,8 +367,8 @@ object Primitive {
          """
       }).asInstanceOf[ClassDef]
 
-      //      println(accClass)
-      accClass
+      println(comClass)
+      comClass
     }
 
     def comPrimitivesFromClassDef: ClassDef => ClassDef = {
