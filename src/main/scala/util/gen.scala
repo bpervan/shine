@@ -29,7 +29,7 @@ object gen {
   def OpenCLKernel(e: rise.core.Expr, name: String = "foo"): shine.OpenCL.KernelNoSizes = {
     val dpia_e = toDPIA(e)
     val p = shine.OpenCL.KernelGenerator.makeCode(dpia_e, name)
-    println(p.code)
+//    println(p.code)
     SyntaxChecker.checkOpenCL(p.code)
     p
   }

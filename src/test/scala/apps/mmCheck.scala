@@ -39,7 +39,7 @@ class mmCheck extends shine.test_util.TestsWithExecutor {
     })
   }
 
-  ignore("nvidia matrix multplication produces expected result") {
+  test("nvidia matrix multplication produces expected result") {
     val (at, b, gold) = randGold()
     val runs = Seq(
       "original" -> runOriginal("CGO17_MMNVIDIA.cl",
