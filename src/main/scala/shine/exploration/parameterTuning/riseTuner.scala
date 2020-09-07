@@ -6,8 +6,7 @@ import opencl.executor.Executor
 import shine.OpenCL.{GlobalSize, LocalSize}
 import util._
 
-object riseTuner {
-  riseTuner
+object riseTuneruwe {
   private val N = 64
   private val M = 128
   private val O = 128

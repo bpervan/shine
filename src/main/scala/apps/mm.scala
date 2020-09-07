@@ -5,7 +5,6 @@ import rise.core.DSL._
 import rise.core.TypeLevelDSL._
 import rise.core.types._
 import rise.openCL.DSL._
-import shine.exploration.parameterTuning.riseTuner
 
 object mm {
   private val id = fun(x => x)
@@ -194,8 +193,6 @@ object mm {
       )) |> join // N.M.f
     ))
   }
-
-  riseTuner
 
   def computeGold(n: Int, m: Int, o: Int,
                   At: Array[Array[Float]],
